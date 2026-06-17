@@ -1,0 +1,50 @@
+{
+  "api": {
+    "base_url": "https://api.threatstream.com/api/v1/snapshot/",
+    "username": "ykestler@llamona.com",
+    "api_key": "REPLACE_WITH_NEW_API_KEY",
+    "timeout": 60
+  },
+  "snapshot": {
+    "intel_version": 1,
+    "poll_interval": 15,
+    "poll_timeout": 3600,
+    "custom_config": {
+      "filter": "state=\"active\" AND confidence>=50 AND date_first>=2026-01-01T00:00:00",
+      "whitelist": {
+        "type": [
+          "ip",
+          "domain"
+        ]
+      },
+      "format": "json_v2",
+      "chunk_size": "100MB",
+      "use_org_whitelist": true
+    }
+  },
+  "download": {
+    "retries": 3,
+    "backoff_seconds": 5
+  },
+  "dedupe": {
+    "key_fields": ["itype", "value"],
+    "normalize": {
+      "itype": "lowercase",
+      "value": "lowercase"
+    },
+    "winner_strategy": [
+      "highest:update_id",
+      "newest:modified_ts",
+      "highest:confidence"
+    ],
+    "merge_tags": true,
+    "merge_sources": true
+  },
+  "output": {
+    "format": "jsonl",
+    "fields": [],
+    "write_duplicates": true,
+    "write_duplicate_summary": true,
+    "include_provenance": true
+  }
+}

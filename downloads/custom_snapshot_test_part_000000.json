@@ -1,0 +1,8 @@
+[
+  {"id":1001,"update_id":5001,"type":"ip","itype":"scan_ip","value":"125.36.253.196","feed_id":2928,"confidence":100,"status":"active","created_ts":"2026-06-01T10:00:00Z","modified_ts":"2026-06-01T10:00:00Z","tags":[{"name":"scanner"}],"meta":{"source":"feed_a"}},
+  {"id":1002,"update_id":5002,"type":"domain","itype":"mal_domain","value":"egbofo.janjhani.cash","feed_id":3001,"confidence":90,"status":"active","created_ts":"2026-06-01T11:00:00Z","modified_ts":"2026-06-01T11:00:00Z","tags":[{"name":"phishing"}],"meta":{"source":"feed_b"}},
+  {"id":1003,"update_id":5003,"type":"domain","itype":"mal_domain","value":"egbofo.janjhani.cash","feed_id":3002,"confidence":95,"status":"active","created_ts":"2026-06-02T11:00:00Z","modified_ts":"2026-06-02T11:00:00Z","tags":[{"name":"credential-theft"}],"meta":{"source":"feed_c"}},
+  {"id":1004,"update_id":5004,"type":"url","itype":"mal_url","value":"http://evil.example.com/login","feed_id":4001,"confidence":75,"status":"active","created_ts":"2026-06-03T12:00:00Z","modified_ts":"2026-06-03T12:00:00Z","tags":[{"name":"credential-harvest"}],"meta":{"source":"feed_d"}},
+  {"id":1005,"update_id":5005,"type":"ip","itype":"scan_ip","value":"125.36.253.196","feed_id":9999,"confidence":85,"status":"active","created_ts":"2026-06-04T09:00:00Z","modified_ts":"2026-06-04T09:00:00Z","tags":[{"name":"masscan"}],"meta":{"source":"feed_e"}},
+  {"id":1006,"update_id":6000,"type":"ip","itype":"scan_ip","value":"125.36.253.196","feed_id":5000,"confidence":100,"status":"active","created_ts":"2026-06-05T15:00:00Z","modified_ts":"2026-06-05T15:00:00Z","tags":[{"name":"updated-record"}],"meta":{"source":"feed_f"}}
+]
