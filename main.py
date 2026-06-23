@@ -42,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
     sync = subparsers.add_parser("sync", help="Create, wait, download, verify, and merge")
     add_common_file_args(sync)
     add_state_mode_args(sync)
-    sync.add_argument("--download-dir", default="downloads/raw", help="Directory for downloaded snapshot files")
+    sync.add_argument("--download-dir", default="downloads/raw", help="Base directory for downloaded snapshot files. sync writes to a snapshot_<id> subfolder.")
 
     return parser
 
@@ -62,7 +62,7 @@ def add_common_api_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_state_mode_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--fresh", action="store_true", help="Delete prior state/output/logs/downloads and start a clean run")
+    parser.add_argument("--fresh", action="store_true", help="Reset state and generated output while preserving logs and raw downloads")
     parser.add_argument("--resume", action="store_true", help="Reuse existing state and continue a previous run")
     parser.add_argument(
         "--reset-state",
@@ -71,12 +71,50 @@ def add_state_mode_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _safe_rmtree(path: Path, *, protected: set[Path]) -> None:
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _safe_remove_contents(path: Path, *, protected: set[Path]) -> None:
+    """Remove the contents of a directory without deleting the directory itself.
+
+    This is intentionally conservative for Windows, where folders may be
+    temporarily locked by Explorer, antivirus, editors, or open file handles.
+    """
     resolved = path.resolve()
-    if resolved in protected:
-        raise RuntimeError(f"Refusing to delete protected path: {path}")
-    if path.exists():
-        shutil.rmtree(path)
+    for protected_path in protected:
+        protected_resolved = protected_path.resolve()
+        if resolved == protected_resolved or _is_relative_to(protected_resolved, resolved):
+            raise RuntimeError(f"Refusing to clean protected path: {path}")
+
+    path.mkdir(parents=True, exist_ok=True)
+
+    for item in path.iterdir():
+        try:
+            if item.is_file() or item.is_symlink():
+                item.unlink()
+            elif item.is_dir():
+                shutil.rmtree(item)
+        except PermissionError as exc:
+            raise PermissionError(
+                f"Could not remove locked path during --fresh cleanup: {item}. "
+                "Close Explorer/VS Code/terminals using that folder, or remove it manually."
+            ) from exc
+
+
+def _safe_unlink(path: Path) -> None:
+    try:
+        if path.exists():
+            path.unlink()
+    except PermissionError as exc:
+        raise PermissionError(
+            f"Could not remove locked file during --fresh cleanup: {path}. "
+            "Close any process using it, then retry."
+        ) from exc
 
 
 def _prepare_run(args: argparse.Namespace) -> None:
@@ -93,24 +131,30 @@ def _prepare_run(args: argparse.Namespace) -> None:
     download_path = Path(getattr(args, "download_dir", input_path))
 
     if getattr(args, "fresh", False):
-        # Merge mode must never delete the user's source input directory.
-        # Sync mode generates its own download directory, so stale API downloads are cleared.
-        if getattr(args, "command", "") == "sync":
-            protected = {Path.cwd().resolve()}
-        else:
-            protected = {input_path.resolve(), Path.cwd().resolve()}
+        # --fresh resets processing state and generated outputs only.
+        # It deliberately preserves logs/ and downloads/raw/ because those
+        # directories are commonly locked on Windows and raw downloads may be
+        # expensive to recreate. Sync writes new API downloads into a
+        # snapshot-specific subfolder, so stale raw files are not merged.
+        protected = {
+            Path.cwd().resolve(),
+            input_path.resolve(),
+            download_path.resolve(),
+            log_path.resolve(),
+            (Path("downloads") / "raw").resolve(),
+            Path("config").resolve(),
+        }
 
-        if state_path.exists():
-            state_path.unlink()
-        if output_path.exists():
-            _safe_rmtree(output_path, protected=protected)
-        # Do not delete the logs directory on Windows during --fresh.
-        # Log files are often held open by editors/AV/indexers, which can raise
-        # WinError 5. Logging is configured with filemode="w" so fresh runs
-        # start clean without removing the directory itself.
+        _safe_unlink(state_path)
+        _safe_remove_contents(output_path, protected=protected)
+
+        # Keep these directories present, but do not delete their contents.
         log_path.mkdir(parents=True, exist_ok=True)
-        if getattr(args, "command", "") == "sync" and download_path.exists():
-            _safe_rmtree(download_path, protected=protected)
+        (Path("downloads") / "raw").mkdir(parents=True, exist_ok=True)
+
+        # Optional generated scratch directories may be safely cleared.
+        _safe_remove_contents(Path("downloads") / "temp", protected=protected)
+        _safe_remove_contents(Path("downloads") / "verified", protected=protected)
         return
 
     if state_path.exists() and not getattr(args, "resume", False):
@@ -189,8 +233,13 @@ def main(argv: list[str] | None = None) -> int:
                 service = _build_snapshot_service(config, state, logger)
                 snapshot = service.create_snapshot()
                 snapshot = service.wait_for_completion(snapshot.get("resource_uri") or snapshot.get("id"))
-                service.download_snapshot_files(snapshot, args.download_dir)
-                args.input_dir = args.download_dir
+
+                snapshot_id = snapshot.get("id") or "unknown"
+                effective_download_dir = Path(args.download_dir) / f"snapshot_{snapshot_id}"
+                logger.info("Sync download directory: %s", effective_download_dir)
+
+                service.download_snapshot_files(snapshot, effective_download_dir)
+                args.input_dir = str(effective_download_dir)
                 _run_merge(args, config, state, logger, mode)
         finally:
             state.close()

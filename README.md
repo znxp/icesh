@@ -94,14 +94,36 @@ python main.py snapshot-download --snapshot-id 8555784 --download-dir downloads/
 ## End-to-end sync
 
 ```powershell
-python main.py sync --fresh --download-dir downloads/raw --input-dir downloads/raw --output-dir output --config config/settings.json
+python main.py sync --fresh --download-dir downloads/raw --output-dir output --config config/settings.json
 ```
 
 ## Fresh and resume
 
-Use `--fresh` to reset state/output/logs for a clean run. Use `--resume` only when continuing an interrupted run.
+Use `--fresh` to reset SQLite state and generated output for a clean run. It preserves `logs/` and `downloads/raw/`. Use `--resume` only when continuing an interrupted run.
 
 
 ### Windows note for `--fresh`
 
-`--fresh` resets the SQLite state database and output/download folders. It no longer deletes the `logs/` directory itself because Windows can lock log folders/files via editors, antivirus, or indexing and raise `WinError 5: Access is denied`. Fresh runs truncate the two log files instead.
+`--fresh` resets the SQLite state database and generated output. It does **not** delete `logs/` or `downloads/raw/` because Windows can lock those folders via Explorer, editors, antivirus, or indexing and raise `WinError 5: Access is denied`.
+
+For `sync`, downloaded API files are written into a snapshot-specific subfolder such as `downloads/raw/snapshot_8555784/`, and the merge step processes only that subfolder. This avoids mixing stale raw downloads with the current run while still preserving existing raw data.
+
+
+## Updated `--fresh` cleanup behavior
+
+`--fresh` removes:
+
+```text
+state.db
+output/*
+downloads/temp/*
+downloads/verified/*
+```
+
+`--fresh` preserves:
+
+```text
+config/
+logs/
+downloads/raw/
+```
