@@ -16,9 +16,35 @@ def normalize_value(value: Any, rule: str | None) -> str:
 
 
 def build_dedupe_key(record: dict[str, Any], config: dict[str, Any]) -> str:
+    """Build the configured dedupe key.
+
+    Supported modes:
+      - threatstream_id: only records with the same ThreatStream object ID match
+      - operational: records match on itype + value
+      - feed_aware: records match on itype + value + feed_id
+      - custom: records match on configured key_fields
+
+    The previous Phase 1 behavior was effectively operational mode.
+    """
     dedupe_cfg = config.get("dedupe", {})
-    key_fields = dedupe_cfg.get("key_fields", ["itype", "value"])
+    mode = str(dedupe_cfg.get("mode", "custom")).strip().lower()
     normalize_rules = dedupe_cfg.get("normalize", {})
+
+    if mode == "threatstream_id":
+        identifier_field = dedupe_cfg.get("identifier_field", "id")
+        return normalize_value(record.get(identifier_field), normalize_rules.get(identifier_field))
+
+    if mode == "operational":
+        key_fields = ["itype", "value"]
+    elif mode == "feed_aware":
+        key_fields = ["itype", "value", "feed_id"]
+    elif mode == "custom":
+        key_fields = dedupe_cfg.get("key_fields", ["itype", "value"])
+    else:
+        raise ValueError(
+            f"Unsupported dedupe.mode: {mode}. "
+            "Use threatstream_id, operational, feed_aware, or custom."
+        )
 
     parts = []
     for field in key_fields:
@@ -115,21 +141,39 @@ def to_datetime(value: Any) -> datetime | None:
 
 
 def merge_context(winner: dict[str, Any], duplicate: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    """Attach duplicate metadata and optionally merge context fields.
+
+    For threatstream_id mode the default is to keep the winning/latest object
+    as-is and only increment _duplicate_count. This avoids reintroducing stale
+    tags or fields that may have been removed from a newer version of the same
+    ThreatStream object.
+
+    For operational/feed-aware/custom modes the default is to merge tags and
+    source/feed context because those modes intentionally collapse multiple
+    objects into a single view.
+    """
     dedupe_cfg = config.get("dedupe", {})
+    mode = str(dedupe_cfg.get("mode", "custom")).strip().lower()
+
+    merge_duplicate_context = dedupe_cfg.get("merge_duplicate_context")
+    if merge_duplicate_context is None:
+        merge_duplicate_context = mode != "threatstream_id"
+
     merged = dict(winner)
 
-    if dedupe_cfg.get("merge_tags", True):
-        merged["tags"] = merge_list_values(winner.get("tags"), duplicate.get("tags"))
+    if merge_duplicate_context:
+        if dedupe_cfg.get("merge_tags", True):
+            merged["tags"] = merge_list_values(winner.get("tags"), duplicate.get("tags"))
 
-    if dedupe_cfg.get("merge_sources", True):
-        sources = []
-        for field in ("source", "source_name", "feed_id"):
-            if winner.get(field) not in (None, ""):
-                sources.append(str(winner.get(field)))
-            if duplicate.get(field) not in (None, ""):
-                sources.append(str(duplicate.get(field)))
-        if sources:
-            merged["_merged_sources"] = sorted(set(sources))
+        if dedupe_cfg.get("merge_sources", True):
+            sources = []
+            for field in ("source", "source_name", "feed_id"):
+                if winner.get(field) not in (None, ""):
+                    sources.append(str(winner.get(field)))
+                if duplicate.get(field) not in (None, ""):
+                    sources.append(str(duplicate.get(field)))
+            if sources:
+                merged["_merged_sources"] = sorted(set(sources))
 
     merged["_duplicate_count"] = int(winner.get("_duplicate_count", 0)) + 1
     return merged

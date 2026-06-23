@@ -27,7 +27,8 @@
     "backoff_seconds": 5
   },
   "dedupe": {
-    "key_fields": ["itype", "value"],
+    "mode": "threatstream_id",
+    "identifier_field": "id",
     "normalize": {
       "itype": "lowercase",
       "value": "lowercase"
@@ -37,8 +38,15 @@
       "newest:modified_ts",
       "highest:confidence"
     ],
+    "merge_duplicate_context": false,
     "merge_tags": true,
-    "merge_sources": true
+    "merge_sources": true,
+    "notes": {
+      "threatstream_id": "Only records with the same ThreatStream object id are considered duplicates.",
+      "operational": "Set mode=operational to dedupe on itype+value.",
+      "feed_aware": "Set mode=feed_aware to dedupe on itype+value+feed_id.",
+      "custom": "Set mode=custom and key_fields=[...] to define your own key."
+    }
   },
   "output": {
     "format": "jsonl",

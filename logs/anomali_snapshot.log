@@ -1,0 +1,4 @@
+2026-06-23T09:03:48Z INFO anomali_snapshot Mode: FRESH
+2026-06-23T09:03:48Z INFO anomali_snapshot Run ID: 20260623_090348
+2026-06-23T09:03:48Z INFO anomali_snapshot Processing file: downloads/custom_snapshot_test_part_000000.json
+2026-06-23T09:03:48Z ERROR anomali_snapshot Command failed: ijson is required for streaming JSON array parsing. Install with: pip install ijson

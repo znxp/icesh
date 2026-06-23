@@ -127,3 +127,83 @@ config/
 logs/
 downloads/raw/
 ```
+
+## Dedupe modes
+
+The current default is now ID-based dedupe:
+
+```json
+"dedupe": {
+  "mode": "threatstream_id",
+  "identifier_field": "id"
+}
+```
+
+In this mode, two records are considered duplicates **only when the ThreatStream object ID matches**. This preserves feed-level and source-level intelligence where the same IOC value appears in multiple feeds as different ThreatStream objects.
+
+Supported modes:
+
+| Mode | Dedupe key | Use case |
+|---|---|---|
+| `threatstream_id` | `id` | Raw/canonical ingest, preserves feed-level intelligence |
+| `operational` | `itype + value` | Clean SIEM/SOAR matching view |
+| `feed_aware` | `itype + value + feed_id` | Feed-level analysis without collapsing feeds |
+| `custom` | `key_fields` from config | User-defined dedupe logic |
+
+Examples:
+
+```json
+"dedupe": {
+  "mode": "operational"
+}
+```
+
+```json
+"dedupe": {
+  "mode": "feed_aware"
+}
+```
+
+```json
+"dedupe": {
+  "mode": "custom",
+  "key_fields": ["itype", "value", "feed_id", "source"]
+}
+```
+
+### Merge context behavior
+
+For `threatstream_id`, `merge_duplicate_context` defaults to `false`, so the winning/latest object is kept as-is and stale tags/fields from older versions are not reintroduced.
+
+For `operational`, `feed_aware`, and `custom`, context merging defaults to enabled, so duplicate tags and source/feed values can be merged into the winning record.
+
+To override explicitly:
+
+```json
+"dedupe": {
+  "mode": "threatstream_id",
+  "merge_duplicate_context": false
+}
+```
+
+## Local test expectations after ID-based dedupe change
+
+The bundled sample file has six records with unique `id` values. With the default `threatstream_id` mode, the expected local merge result is now:
+
+```text
+processed=6 unique=6 duplicates=0 errors=0
+```
+
+To reproduce the older behavior where the same IOC value is collapsed, temporarily set:
+
+```json
+"dedupe": {
+  "mode": "operational"
+}
+```
+
+Then the sample produces:
+
+```text
+processed=6 unique=3 duplicates=3 errors=0
+```
