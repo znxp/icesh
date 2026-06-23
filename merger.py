@@ -29,13 +29,17 @@ class MergeEngine:
             raise FileNotFoundError(f"Input directory does not exist: {input_path}")
 
         run_started = datetime.now(timezone.utc)
-        run_id = run_started.strftime("%Y%m%d_%H%M%S")
+        timestamp = run_started.strftime("%Y%m%d_%H%M%S_%f")
+        snapshot_suffix = input_path.name if input_path.name.startswith("snapshot_") else ""
+        run_id = f"run_{timestamp}_{snapshot_suffix}" if snapshot_suffix else f"run_{timestamp}"
         self.logger.info("Run ID: %s", run_id)
         self.state.start_run(run_id, run_started.isoformat(), mode)
 
         files = sorted(input_path.glob("*.json"))
         if not files:
             raise FileNotFoundError(f"No .json files found in {input_path}")
+
+        run_output_dir = Path(output_dir) / "runs" / run_id
 
         manifest = {
             "run_id": run_id,
@@ -45,6 +49,7 @@ class MergeEngine:
             "started_ts": run_started.isoformat(),
             "input_dir": str(input_path),
             "input_files": [file_path.name for file_path in files],
+            "output_dir": str(run_output_dir),
             "config_file": str(config_file),
             "files": [],
             "config": self.config,
@@ -60,7 +65,7 @@ class MergeEngine:
             total_errors += file_result["errors"]
             self.state.commit()
 
-        writer = OutputWriter(output_dir, self.config)
+        writer = OutputWriter(run_output_dir, self.config)
         merged_path = writer.write_merged(self.state.iter_winners())
         manifest["merged_output"] = str(merged_path)
 

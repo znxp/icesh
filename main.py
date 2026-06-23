@@ -131,30 +131,19 @@ def _prepare_run(args: argparse.Namespace) -> None:
     download_path = Path(getattr(args, "download_dir", input_path))
 
     if getattr(args, "fresh", False):
-        # --fresh resets processing state and generated outputs only.
-        # It deliberately preserves logs/ and downloads/raw/ because those
-        # directories are commonly locked on Windows and raw downloads may be
-        # expensive to recreate. Sync writes new API downloads into a
-        # snapshot-specific subfolder, so stale raw files are not merged.
-        protected = {
-            Path.cwd().resolve(),
-            input_path.resolve(),
-            download_path.resolve(),
-            log_path.resolve(),
-            (Path("downloads") / "raw").resolve(),
-            Path("config").resolve(),
-        }
-
+        # --fresh now resets only processing state. It does NOT delete output/,
+        # logs/, or downloads/raw/. Each merge/sync writes to a new run-specific
+        # output folder under output/runs/run_<timestamp>[_snapshot_<id>].
+        # This avoids Windows folder-lock issues from Explorer, VS Code, AV,
+        # or open terminals while preserving previous run evidence.
         _safe_unlink(state_path)
-        _safe_remove_contents(output_path, protected=protected)
 
-        # Keep these directories present, but do not delete their contents.
+        output_path.mkdir(parents=True, exist_ok=True)
+        (output_path / "runs").mkdir(parents=True, exist_ok=True)
         log_path.mkdir(parents=True, exist_ok=True)
         (Path("downloads") / "raw").mkdir(parents=True, exist_ok=True)
-
-        # Optional generated scratch directories may be safely cleared.
-        _safe_remove_contents(Path("downloads") / "temp", protected=protected)
-        _safe_remove_contents(Path("downloads") / "verified", protected=protected)
+        (Path("downloads") / "temp").mkdir(parents=True, exist_ok=True)
+        (Path("downloads") / "verified").mkdir(parents=True, exist_ok=True)
         return
 
     if state_path.exists() and not getattr(args, "resume", False):
