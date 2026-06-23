@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
+from json_utils import json_dumps, make_json_safe
+
 
 class OutputWriter:
     def __init__(self, output_dir: str | Path, config: dict[str, Any]):
@@ -40,13 +42,13 @@ class OutputWriter:
     def write_manifest(self, manifest: dict[str, Any]) -> Path:
         path = self.output_dir / "reports" / "merge_manifest.json"
         with path.open("w", encoding="utf-8") as handle:
-            json.dump(manifest, handle, indent=2, ensure_ascii=False)
+            json.dump(make_json_safe(manifest), handle, indent=2, ensure_ascii=False)
         return path
 
     def _write_jsonl(self, path: Path, records: Iterable[dict[str, Any]]) -> Path:
         with path.open("w", encoding="utf-8") as handle:
             for record in records:
-                handle.write(json.dumps(project_fields(record, self.config), ensure_ascii=False, separators=(",", ":")))
+                handle.write(json_dumps(project_fields(record, self.config), ensure_ascii=False, separators=(",", ":")))
                 handle.write("\n")
         return path
 
@@ -57,7 +59,7 @@ class OutputWriter:
             for record in records:
                 if not first:
                     handle.write(",\n")
-                handle.write(json.dumps(project_fields(record, self.config), ensure_ascii=False))
+                handle.write(json_dumps(project_fields(record, self.config), ensure_ascii=False))
                 first = False
             handle.write("\n]\n")
         return path
@@ -88,7 +90,7 @@ def flatten_for_csv(record: dict[str, Any], fields: list[str]) -> dict[str, Any]
     for field in fields:
         value = record.get(field)
         if isinstance(value, (dict, list)):
-            row[field] = json.dumps(value, ensure_ascii=False)
+            row[field] = json_dumps(value, ensure_ascii=False)
         else:
             row[field] = value
     return row

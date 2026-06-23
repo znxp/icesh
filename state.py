@@ -5,6 +5,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from json_utils import json_dumps, make_json_safe
+
 
 class StateStore:
     def __init__(self, db_path: str | Path):
@@ -130,7 +132,7 @@ class StateStore:
                 _safe_int(snapshot.get("total_count")),
                 max_update_id,
                 str(snapshot.get("resource_uri", "")),
-                json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")),
+                json_dumps(snapshot, ensure_ascii=False, separators=(",", ":")),
             ),
         )
         if max_update_id is not None and str(snapshot.get("status", "")).lower() == "completed":
@@ -239,7 +241,7 @@ class StateStore:
                 _safe_int(record.get("update_id")),
                 str(record.get("modified_ts", "")),
                 _safe_int(record.get("confidence")),
-                json.dumps(record, ensure_ascii=False, separators=(",", ":")),
+                json_dumps(record, ensure_ascii=False, separators=(",", ":")),
                 source_file,
                 record_number,
             ),
@@ -258,7 +260,7 @@ class StateStore:
                 _safe_int(record.get("update_id")),
                 str(record.get("modified_ts", "")),
                 _safe_int(record.get("confidence")),
-                json.dumps(record, ensure_ascii=False, separators=(",", ":")),
+                json_dumps(record, ensure_ascii=False, separators=(",", ":")),
                 source_file,
                 record_number,
                 dedupe_key,
@@ -294,7 +296,7 @@ class StateStore:
                 duplicate_source_file,
                 winner_record_number,
                 duplicate_record_number,
-                json.dumps(duplicate_record, ensure_ascii=False, separators=(",", ":")),
+                json_dumps(duplicate_record, ensure_ascii=False, separators=(",", ":")),
             ),
         )
 
