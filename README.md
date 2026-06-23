@@ -100,3 +100,8 @@ python main.py sync --fresh --download-dir downloads/raw --input-dir downloads/r
 ## Fresh and resume
 
 Use `--fresh` to reset state/output/logs for a clean run. Use `--resume` only when continuing an interrupted run.
+
+
+### Windows note for `--fresh`
+
+`--fresh` resets the SQLite state database and output/download folders. It no longer deletes the `logs/` directory itself because Windows can lock log folders/files via editors, antivirus, or indexing and raise `WinError 5: Access is denied`. Fresh runs truncate the two log files instead.

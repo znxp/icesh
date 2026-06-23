@@ -18,11 +18,11 @@ def setup_logging(log_dir: str | Path) -> logging.Logger:
         datefmt="%Y-%m-%dT%H:%M:%SZ",
     )
 
-    info_handler = logging.FileHandler(path / "anomali_snapshot.log", encoding="utf-8")
+    info_handler = logging.FileHandler(path / "anomali_snapshot.log", mode="w", encoding="utf-8")
     info_handler.setLevel(logging.INFO)
     info_handler.setFormatter(formatter)
 
-    error_handler = logging.FileHandler(path / "anomali_snapshot_errors.log", encoding="utf-8")
+    error_handler = logging.FileHandler(path / "anomali_snapshot_errors.log", mode="w", encoding="utf-8")
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
 

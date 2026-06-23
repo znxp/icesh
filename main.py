@@ -104,8 +104,11 @@ def _prepare_run(args: argparse.Namespace) -> None:
             state_path.unlink()
         if output_path.exists():
             _safe_rmtree(output_path, protected=protected)
-        if log_path.exists():
-            _safe_rmtree(log_path, protected=protected)
+        # Do not delete the logs directory on Windows during --fresh.
+        # Log files are often held open by editors/AV/indexers, which can raise
+        # WinError 5. Logging is configured with filemode="w" so fresh runs
+        # start clean without removing the directory itself.
+        log_path.mkdir(parents=True, exist_ok=True)
         if getattr(args, "command", "") == "sync" and download_path.exists():
             _safe_rmtree(download_path, protected=protected)
         return
