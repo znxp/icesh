@@ -54,5 +54,16 @@
     "write_duplicates": true,
     "write_duplicate_summary": true,
     "include_provenance": true
+  },
+  "proxy": {
+    "enabled": false,
+    "http_proxy": "http://proxy.company.com:8080",
+    "https_proxy": "http://proxy.company.com:8080",
+    "username": "",
+    "password_env": "ANOMALI_PROXY_PASSWORD",
+    "no_proxy": [
+      "localhost",
+      "127.0.0.1"
+    ]
   }
 }

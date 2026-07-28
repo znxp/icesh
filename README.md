@@ -1,6 +1,6 @@
-#  Snapshot Utility
+# Anomali Snapshot Utility
 
-Python utility for . Snapshot API creation, polling, downloads, SHA256 verification, streaming JSON parsing, merge, dedupe, and duplicate reporting.
+Python utility for Anomali Snapshot API creation, polling, downloads, SHA256 verification, streaming JSON parsing, merge, dedupe, and duplicate reporting.
 
 ## Dependency
 
